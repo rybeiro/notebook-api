@@ -205,7 +205,7 @@ belongs_to :kind
 
 # I18N - Internacionalização
 Trata-se da configuração e tratamento do idioma a ser exibido.
-Para usar a internacionalização, primeiramente criamos um arquivo no diretório *config/initializers/locale.rb.rb*. Exemplo:
+Para usar a internacionalização, primeiramente criamos um arquivo no diretório *config/initializers/locale.rb*. Exemplo:
 ```
 #I18n.load_path += Dir[Rails.root.join('lib', 'locale', '*.{rb,yml')]
 # É possível colocar os arquivos de traduções no diretório *lib* se preferir. Mas o arquivo locale.rb deve ser criado dentro da pasta lib e a linha de cima deve ser descomentada.
