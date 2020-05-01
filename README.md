@@ -28,7 +28,7 @@ rails db:create
 ```
 
 ## Criando uma Task (tarefa) para popular nossa tabela
-Para obter dados para utlizar em desenvolvimento podemos utilizar uma biblioteca para gerar dados falsos, como nomes, endereços e números de telefone etc. [Documentação](https://github.com/faker-ruby/faker).
+Para obter dados para utlizar em desenvolvimento podemos utilizar uma biblioteca para gerar dados falsos, como nomes, endereços e números de telefone etc. [Faker](https://github.com/faker-ruby/faker).
 Inclua no arquivo *Gemfile* no ambiente de desenvolvimento. Depois de inserir execute ```bundle install```
 
 Para criar uma tarefa através do gerador do *Rails*, utilize o comando:
@@ -203,6 +203,61 @@ rails db:drop db:create db:migrate dev:setup
 belongs_to :kind
 ```
 
+# I18N - Internacionalização
+Trata-se da configuração e tratamento do idioma a ser exibido.
+Para usar a internacionalização, primeiramente criamos um arquivo no diretório *config/initializers/locale.rb.rb*. Exemplo:
+```
+#I18n.load_path += Dir[Rails.root.join('lib', 'locale', '*.{rb,yml')]
+# É possível colocar os arquivos de traduções no diretório *lib* se preferir. Mas o arquivo locale.rb deve ser criado dentro da pasta lib e a linha de cima deve ser descomentada.
+
+#Set default locale to something other that :en
+I18n.default_locale = :'pt-BR'
+```
+Para traduzir nossa aplicação vou utilizar uma biblioteca (*gem 'rails-i18n'*) pronta em [Rails i18n](https://github.com/svenfuchs/rails-i18n). O passo é simples, insira no arquivo *Gemfile* essa linha ```'gem 'rails-i18n', '~> 6.0.0' # For 6.0.0 or higher'```
+> **Atenção:** é importante verificar a sua versão rails para adicionar a versão correta da *Gem*.
+
+Vamos criar o arquivo com as devidas traduções que deve ficar no diretório *config/locales/pt_br.yml* com o seguinte conteúdo.
+```
+'pt-BR':
+  hello: "Olá Mundo"
+```
+Para testar vamos utilizar o console do Rails
+```
+rails c
+```
+### Exemplos no console
+#### Traduzir uma chave
+```
+I18n.translate(hello) ou I18n.t(hello)
+```
+*output:* Olá Mundo.
+#### Verificar o idioma padrão
+```
+I18n.default_locale
+```
+*output:* 'pt-BR'
+#### Alterando o idioma
+```
+I18n.default_locale = :en
+```
+Repita o exemplo de traduzir a chave *hello*
+*output:* Hello World
+
+#### Traduções de datas - utilizaremos o comando: I18n.l() localizado no idioma padrão
+```
+Date.today
+```
+*output:* Fri, 01 May 2020
+```
+I18n.l(Date.today)
+```
+*output:* "01/05/2020"
+```
+I18n.default_locale = :en
+I18n.l(Date.today)
+```
+*output:* "2020-05-01"
+
 # Solução de Problemas
 ### Fix auto-Reloading
 Checa automáticamente alterações do status code no rails
@@ -215,5 +270,3 @@ config.file_watcher=ActiveSupport::FileUpdateChecker
 export RUBYOPT='-W:no-deprecated'
 ```
 
-# I18N
-...
