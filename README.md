@@ -2,6 +2,9 @@
 Este Manual é para esclarecer e auxiliar na criação de uma ***API*** com *Rails*, além esclarecer dúvidas frequentes sobre alguns recursos utilizados no *Framework*
 
 > Objetivo do projeto - Criar uma agenda
+- Contact (Contatos) tem um Kind
+- Kind (Tipos de contatos)
+- Phone (Numeros de telefone) tem um contato
 
 ## Requisitos minimos e opcionais
 - Ruby  => versão => 2.5
@@ -258,11 +261,144 @@ I18n.l(Date.today)
 ```
 *output:* "2020-05-01"
 
+# Crindo a Model Telefones (Phones)
+Gerar apenas o *Model*. O comando já criará a *migration* e o relacionamento *belongs_to :contact*.
+```
+rails g model Phone number:string contact:references
+```
+No *Model* Contatos o relacionamento que informa que um contato tem vários números de telefones com *has_many :phones*
+### Task para popular os telefones
+```
+Contact.all.each do |contact|
+  Random.rand(5).times do |i|
+    phone = Phone.create!(number: Faker::PhoneNumber.cell_phone)
+    contact.phones << phone
+    contact.save!
+  end
+end
+```
+Recriar o banco de dados com todas as novas migrações.
+```
+rails db:drop db:create db:migrate dev:setup
+```
+
+# Dicas úteis
+### Internacionalização 
+Para utilizar a tradução da data para pt-br e incluir o relacionamentos. Já sabendo que o retorno em Json utiliza-se do método as_json implicitamente, faremos a sobreescrita do método no *Model*
+```
+# Model/Contacts.rb
+def as_json(options={})
+  h = super(options)
+  h[:birthday] = (I18n.l(self.birthday) unless self.birthday.blank?)
+  h
+end
+```
+### Estilando o console do rails
+Para ter um terminal mais elegante e estilizado. Incluir no ambiente de desenvolvimento ```gem 'pry-rails``` a biblioteca está disponível em [Pry Rails](https://github.com/rweng/pry-rails)
+
+## Retornando e postando dados com relacionamento has_many
+Para retornar os dados de um relacionamento *has_many* incluiremos no retorno do *json* na *Controller*
+```
+#Controller/contacts_controller.rb
+render json: @contact, include: :phones
+```
+Para criar um novo contato postando o telefone é necessário fazer a configuração na *Model*
+- Nested Attributes with has_many (atributos aninhados com muitos dados)
+
+```
+# Model/Contact.rb
+accepts_nested_attributes_for :phones
+```
+> Relembrando com incluir um contato através de *Hash*
+```
+# exemplo de hash
+params = {
+  contact: {
+    name: "Fabio", 
+    email: "fabio@faker.com", 
+    birthday: "2000-01-01", 
+    kind_id: 3
+  }
+}
+# exemplo para salvar através de hash somente o contato
+Contact.create(params[:contact])
+```
+Uma forma de incluir os telefones junto com o contato e através de *Hash* com o método *attributes*
+```
+# exemplo que inclui o contato com telefone
+params = {
+  contact: {
+    name: "Fabio", 
+    email: "fabio@faker.com", 
+    birthday: "2000-01-01", 
+    kind_id: 3,
+    phones_attributes: [
+      {number: (11) 98765-4321},
+      {number: (11) 89765-4321},
+      {number: (11) 79865-4321}
+    ]
+  }
+}
+# exemplo para salvar através de hash somente o contato
+Contact.create(params[:contact])
+```
+> Depurando erro de transação (transaction)
+```
+# atribuir o comando em uma variável
+depuracao = Contact.create(params[:contact])
+# O método erro
+depuracao.errors
+```
+O *Model/Phone.rb* espera receber um contato sempre que está sendo criado. Para tiramos essa obrigatoriedade setamos o parâmetro *optinal: true* no *belongs_to :contact, optinal: true*
+
+Também ajuste o *contacts_controller.rb* para permitir que o telefone seja persistido na inclusão do contato.
+```
+# Inclusão de phones_attributes
+# Only allow a trusted parameter "white list" through.
+def contact_params
+  params.require(:contact).permit(:name, :email, :birthday, :kind_id, phones_attributes:[:id, :number])
+end
+```
+### PATCH - Fazendo a atualização dos dados com relacionamento
+> Na atualização de um registro é necessário passar o id na requisição. Importante lembrar que para atualizar os registros do relaciomento, também é necessário passar o id, senão será criado um novo registro.
+#### Apagando registro com relacionamento
+Precisamos permitir a exclusão do registro no *Model/Contact* para exclusão de forma aninhada dos respectivos telefones.
+```
+# Inclusão de allow_destroy em accept_nested_attributes_for
+accept_nested_attributes_for :phone, allow_destroy: true
+```
+Também permitir a exclusão no *contact_params*
+```
+def contact_params
+  params.require(:contact).permit(:name, :email, :birthday, :kind_id, phones_attributes:[:id, :number, :_destroy])
+end
+```
+
+Na chamada do método PATCH temos que passar os parâmetros *id* e *_destroy*
+```
+# exemplo
+{
+  "contact": {
+    "name": ...,
+    "email": ...,
+    "birthday": ...,
+    "kind_id": ...,
+    "phones_attributes": [
+      {
+        "id": 15,
+        "_destroy": 1
+      }
+    ]
+  }
+}
+```
+
+
 # Solução de Problemas
 ### Fix auto-Reloading
 Checa automáticamente alterações do status code no rails
-config/Enviroment/development.rb
 ```
+# config/Enviroment/development.rb
 config.file_watcher=ActiveSupport::FileUpdateChecker
 ```
 ### Warnings deprecate exibidos no terminal. ruby version > 2.6
